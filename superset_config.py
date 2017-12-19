@@ -1,3 +1,7 @@
+# Sample superset_config.py file
+# See https://github.com/apache/incubator-superset/tree/master/superset
+# for more customizing options
+
 from .secrets import SECRET_KEY
 from werkzeug.contrib.cache import RedisCache
 
@@ -6,8 +10,10 @@ from werkzeug.contrib.cache import RedisCache
 #---------------------------------------------------------
 ROW_LIMIT = 5000
 SUPERSET_WORKERS = 4
+SUPERSET_CELERY_WORKERS = 32
 
-SUPERSET_WEBSERVER_PORT = 8088
+# Disabled, running gunicorn with unix socket instead
+#SUPERSET_WEBSERVER_PORT = 8088
 #---------------------------------------------------------
 
 #---------------------------------------------------------
@@ -32,15 +38,18 @@ WTF_CSRF_EXEMPT_LIST = []
 MAPBOX_API_KEY = ''
 
 
-# Celery config, as of version superset version 0.22, async sqlab
-# queries need a superset worker spawned from the cli, it does not
-# read the superset_config.py file and start them accordingly
+# Celery config, as of version superset version 0.22, options
+# SUPERSET_WORKERS and SUPERSET_CELERY_WORKERS seem to have no effect
+# on the superset server, it does not seem to start workers accordingly
+# Async sqlab queries need a superset worker spawned from the cli
+# with:
+# user@host:~$ path/to/venv/bin/superset worker -w n
+# where n is the number of celery workers
 class CeleryConfig(object):
     BROKER_URL = 'redis://localhost:6379/0'
     CELERY_IMPORTS = ('superset.sql_lab', )
     CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
     CELERY_ANNOTATIONS = {'tasks.add': {'rate_limit': '10/s'}}
-
 CELERY_CONFIG = CeleryConfig
 
 RESULTS_BACKEND = RedisCache(
