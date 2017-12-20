@@ -68,12 +68,15 @@ This document assumes you're using an Ubuntu/Debian build, and Aptitude as your 
     ```
 
 - Generate a `secrets.py` file, with a `SECRET_KEY` (if doesn't already exist).
-- [Generator file link](https://github.com/djangulo/incubator-superset_templates/blob/master/gen_secret_key.py) (github.com)
+- [Generator file link](https://github.com/djangulo/incubator-superset_templates/blob/master/gen_secret_key.py) (github.com), and insert it into superset config
 
     ```
     touch __init__.py
     wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/gen_secret_key.py
     python gen_secret_key.py
+    export SECRET_KEY_LINE=$(eval "cat secrets.py | grep SECRET_KEY")
+    sed -i "/SECRET_KEY/d" superset_config.py
+    sed -i "/Your App ssecretkey/a\\${SECRET_KEY}" superset_config.py
     ``` 
 
  - Create virtualenv and install superset

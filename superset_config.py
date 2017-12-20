@@ -2,8 +2,6 @@
 # Superset version: 0.22.1
 # See https://github.com/apache/incubator-superset/tree/master/superset
 # for more customizing options
-
-from .secrets import SECRET_KEY
 from werkzeug.contrib.cache import RedisCache
 
 #---------------------------------------------------------
