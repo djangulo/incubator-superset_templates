@@ -1,4 +1,4 @@
-# Superset install
+# Superset deployment instructions
 
 ## Initial install
 
@@ -9,7 +9,7 @@ This document assumes you're using an Ubuntu/Debian build, and Aptitude as your 
  - It's important to create the local DB cluster before installing superset, so as to prevent mistakenly working on the sqlite installation (and having to painstakingly re-write everything: Superset [as of version 0.22.1] doesn't have a simple way to migrate all dashboards and slices)
 
     ```
-    sudo apt-get install -y mysql-server
+    sudo apt-get install -y mysql-server libmysqlclient-dev
     ```
     It will ask you for a root password, set it accordingly, then run
     ```
@@ -56,7 +56,7 @@ This document assumes you're using an Ubuntu/Debian build, and Aptitude as your 
  - Create superset dir, change ownership and switch to it
 
     ```
-    sudo mkdir -p /opt/superset && sudo chown -r $USER:root /opt/superset && cd /opt/superset
+    sudo mkdir -p /opt/superset && sudo chown -R $USER:root /opt/superset && cd /opt/superset
     ```
 
     The commands that follow assume you're in the /opt/superset directory
@@ -75,8 +75,8 @@ This document assumes you're using an Ubuntu/Debian build, and Aptitude as your 
     wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/gen_secret_key.py
     python gen_secret_key.py
     export SECRET_KEY_LINE=$(eval "cat secrets.py | grep SECRET_KEY")
-    sed -i "/SECRET_KEY/d" superset_config.py
-    sed -i "/Your App ssecretkey/a\\${SECRET_KEY}" superset_config.py
+    sed -i "s/SECRET_KEY/#SECRET_KEY/g" superset_config.py
+    sed -i "/Your App secret key/a\\${SECRET_KEY_LINE}" superset_config.py
     ``` 
 
  - Create virtualenv and install superset
@@ -88,7 +88,7 @@ This document assumes you're using an Ubuntu/Debian build, and Aptitude as your 
     pip install superset
     ```
 
-    Install: database dependencies (mysql in this case, see: [here](https://superset.incubator.apache.org/installation.html#database-dependencies) (github.com) for more information on SqlAlchemy dependencies (github.com)), and others (caching, etc)
+    Install: database dependencies (mysql in this case, see: [here](https://superset.incubator.apache.org/installation.html#database-dependencies) (github.com) for more information on SqlAlchemy dependencies), and others (caching, etc)
 
     ```
     pip install mysqlclient redis gevent
@@ -128,3 +128,46 @@ pip install superset --upgrade
 superset db upgrade
 superset init
 ```
+
+## Server
+
+Server runs with a systemd service for gunicorn, reverse-proxying to nginx. Use an environment variable to set SITENAME to the domain name.
+
+### Set up gunicorn's systemd server
+```
+export SITENAME=superset.address.com
+```
+
+- Download the gunicorn-systemd template from [here](https://github.com/djangulo/incubator-superset_templates/blob/master/gunicorn-systemd.template.service) (github.com)
+
+```
+wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/gunicorn-systemd.template.service
+```
+
+Rename the file, and modify it to contain the server address details
+
+```
+mv gunicorn-systemd.template.service gunicorn-$SITENAME.service
+sed -i '/s/SITENAME/${SITENAME}/g' gunicorn-$SITENAME.service
+```
+
+Create log dir and files and change their ownership
+
+```
+sudo mkdir /var/log/superset
+touch /var/log/superset/error.log
+touch /var/log/superset/access.log
+sudo -R chown $USER:root /var/log/superset
+```
+
+Move the systemd file to `/etc/systemd/system/`, reload daemon, enable and start the service
+
+```
+sudo mv gunicorn-$SITENAME.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable gunicorn-$SITENAME.service
+```
+
+### Set up nginx's reverse proxy to gunicorn, and ssl
+
+

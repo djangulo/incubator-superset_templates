@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Sample superset_config.py file
 # Superset version: 0.22.1
 # See https://github.com/apache/incubator-superset/tree/master/superset
