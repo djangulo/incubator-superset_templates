@@ -28,6 +28,7 @@ SUPERSET_CELERY_WORKERS = 32
 # superset metadata (slices, connections, tables, dashboards, ...).
 # Note that the connection information to connect to the datasources
 # you want to explore are managed directly in the web UI
+# SQLALCHEMY_SED_HOOK
 SQLALCHEMY_DATABASE_URI = 'sqlite:////path/to/superset.db'
 
 # Flask-WTF flag for CSRF
