@@ -167,6 +167,7 @@ Move the systemd file to `/etc/systemd/system/`, reload daemon, enable and start
 sudo mv gunicorn-$SITENAME.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable gunicorn-$SITENAME.service
+sudo systemctl start gunicorn-$SITENAME.service
 ```
 
 ### Set up nginx's reverse proxy to gunicorn, and ssl
@@ -180,14 +181,16 @@ export SITENAME=superset.address.com
 Download:
  - ssl-params [here](https://github.com/djangulo/incubator-superset_templates/blob/master/ssl-params.conf)
  - ssl-template template file [here](https://github.com/djangulo/incubator-superset_templates/blob/master/ssl-template.conf)
- - nginx template file [here](https://github.com/djangulo/incubator-superset_templates/blob/master/gunicorn-nginx.template.conf)
+ - nginx http template file [here](https://github.com/djangulo/incubator-superset_templates/blob/master/nginx-http.template.conf)
+  - nginx ssl template file [here](https://github.com/djangulo/incubator-superset_templates/blob/master/nginx-ssl.template.conf)
  - letsencrypt domain template file [here](https://github.com/djangulo/incubator-superset_templates/blob/master/letsencrypt-domain.template.conf)
  - letsencrypt cron job to renew certs [here](https://github.com/djangulo/incubator-superset_templates/blob/master/renew-letsencrypt-template.sh)
 
 ```
 wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/ssl-template.conf
 wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/ssl-params.conf
-wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/gunicorn-nginx.template.conf
+wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/nginx-http.template.conf
+wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/nginx-ssl.template.conf
 wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/letsencrypt-domain.template.conf
 wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/renew-letsencrypt-template.sh
 ```
@@ -202,10 +205,15 @@ The next block is a blast-through install of certbot and a lets-encrypt certific
 
 ```
 sudo git clone https://github.com/certbot/certbot /opt/letsencrypt
-sudo cd /opt/letsencrypt && git pull origin master
+cd /opt/letsencrypt && git pull origin master
 sudo mkdir -p /var/www/letsencrypt
 sudo chgrp www-data /var/www/letsencrypt
 sudo chmod -R 755 /var/www/letsencrypt
+sudo mkdir -p /etc/letsencrypt/configs
+cd /opt/superset
+sed -i  "s/SITENAME/$SITENAME/g" letsencrypt-domain.template.conf
+sed -i  "s/USEREMAIL/$USEREMAIL/g" letsencrypt-domain.template.conf
+sudo mv letsencrypt-domain.template.conf /etc/letsencrypt/configs/$SITENAME.conf
 ```
 
 Install nginx and remove the default page
@@ -215,11 +223,54 @@ sudo rm /etc/nginx/sites-enables/default.conf
 sudo mv /etc/nginx/sites-available/default.conf /etc/nginx/sites-available/default.bak
 ```
 
-Modify, rename and move `gunicorn-nginx.template.conf` to it's new home:
+Modify, rename and move `nginx-http.template.conf` and `nginx-ssl.template.conf` to their new home:
 
 ```
-sed "
+sed -i "s/SITENAME/$SITENAME/g" nginx-http.template.conf
+sed -i "s/SITENAME/$SITENAME/g" nginx-ssl.template.conf
+sudo mv nginx-http.template.conf /etc/nginx/sites-available/$SITENAME.nginx.conf
+sudo mv nginx-ssl.template.conf /etc/nginx/sites-available/$SITENAME-ssl.nginx.conf
+sudo ln -s /etc/nginx/sites-available/$SITENAME.nginx.conf /etc/nginx/sites-enabled/
 ```
 
+Testing or enabling nginx ssl server at this moment will fail, on account of the certificates not being there. We need to create them first:
 
+```
+cd /opt/letsencrypt
+./certbot-auto --non-interactive --config /etc/letsencrypt/configs/$SITENAME.conf certonly
+```
 
+Modify and move the ssl snippets into `/etc/nginx/snippets/`
+
+```
+cd /opt/superset
+sudo mkdir -p /etc/nginx/snippets
+sed -i "/s/SITENAME/$SITENAME/g" ssl-template.conf
+sudo mv ssl-template.conf /etc/nginx/snippets/ssl-$SITENAME.conf
+sudo mv ssl-params.conf /etc/nginx/snippets/ssl-params.conf
+```
+
+Enable your superset ssl server:
+
+```
+sudo ln -s /etc/nginx/sites-available/$SITENAME-ssl.nginx.conf /etc/nginx/sites-enabled/
+```
+
+Test nginx, and if it works, reload:
+
+```
+sudo nginx -t
+sudo nginx -s reload
+```
+
+Finally, setup letsencrypt auto-renew with a cron script
+
+```
+mkdir -p /home/$USER/.local/bin
+sed -i "s/SITENAME/$SITENAME/g" renew-letsencrypt-template.sh
+mv renew-letsencrypt-template.sh /home/$USER/.local/bin/$SITENAME-renew-LE.sh
+sudo mkdir -p /var/log/letsencrypt
+sudo chown -R $USER:root /var/log/letsencrypt
+sudo chmod +x /home/$USER/.local/bin/$SITENAME-renew-LE.sh
+echo "0 0 1 JAN,MAR,MAY,JUL,SEP,NOV * /home/$USER/.local/bin/$SITENAME-renew-LE.sh" | tee -a | crontab
+```
