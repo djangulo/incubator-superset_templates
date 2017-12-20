@@ -8,7 +8,7 @@ WorkingDirectory=/opt/superset
 ExecStart=/opt/superset/venv/bin/gunicorn \
         --workers 4 \
         --worker-class gevent \
-        --worker-connections 500
+        --worker-connections 500 \
         --timeout 120 \
         --bind unix:/tmp/SITENAME.socket \
         --limit-request-line 0 \
