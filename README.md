@@ -144,20 +144,21 @@ export SITENAME=superset.address.com
 wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/gunicorn-systemd.template.service
 ```
 
-Rename the file, and modify it to contain the server address details
+Rename the file, and modify it to contain the server address details and user
 
 ```
 mv gunicorn-systemd.template.service gunicorn-$SITENAME.service
-sed -i '/s/SITENAME/${SITENAME}/g' gunicorn-$SITENAME.service
+sed -i "s/SITENAME/$SITENAME/g" gunicorn-$SITENAME.service
+sed -i "s/USERNAME/$USER/g" gunicorn-$SITENAME.service
 ```
 
 Create log dir and files and change their ownership
 
 ```
-sudo mkdir /var/log/superset
+sudo mkdir -p /var/log/superset
 touch /var/log/superset/error.log
 touch /var/log/superset/access.log
-sudo -R chown $USER:root /var/log/superset
+sudo chown -R $USER:root /var/log/superset
 ```
 
 Move the systemd file to `/etc/systemd/system/`, reload daemon, enable and start the service
@@ -169,5 +170,56 @@ sudo systemctl enable gunicorn-$SITENAME.service
 ```
 
 ### Set up nginx's reverse proxy to gunicorn, and ssl
+
+Replace proper values here, we'll use these environment variables extensively
+```
+export USEREMAIL=your.email@website.com
+export SITENAME=superset.address.com
+```
+
+Download:
+ - ssl-params [here](https://github.com/djangulo/incubator-superset_templates/blob/master/ssl-params.conf)
+ - ssl-template template file [here](https://github.com/djangulo/incubator-superset_templates/blob/master/ssl-template.conf)
+ - nginx template file [here](https://github.com/djangulo/incubator-superset_templates/blob/master/gunicorn-nginx.template.conf)
+ - letsencrypt domain template file [here](https://github.com/djangulo/incubator-superset_templates/blob/master/letsencrypt-domain.template.conf)
+ - letsencrypt cron job to renew certs [here](https://github.com/djangulo/incubator-superset_templates/blob/master/renew-letsencrypt-template.sh)
+
+```
+wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/ssl-template.conf
+wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/ssl-params.conf
+wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/gunicorn-nginx.template.conf
+wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/letsencrypt-domain.template.conf
+wget https://raw.githubusercontent.com/djangulo/incubator-superset_templates/master/renew-letsencrypt-template.sh
+```
+
+Build Diffie-Hellman key exchange parameters, if they don't already exist:
+
+```
+openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096
+```
+
+The next block is a blast-through install of certbot and a lets-encrypt certificate:
+
+```
+sudo git clone https://github.com/certbot/certbot /opt/letsencrypt
+sudo cd /opt/letsencrypt && git pull origin master
+sudo mkdir -p /var/www/letsencrypt
+sudo chgrp www-data /var/www/letsencrypt
+sudo chmod -R 755 /var/www/letsencrypt
+```
+
+Install nginx and remove the default page
+```
+sudo apt-get install nginx
+sudo rm /etc/nginx/sites-enables/default.conf
+sudo mv /etc/nginx/sites-available/default.conf /etc/nginx/sites-available/default.bak
+```
+
+Modify, rename and move `gunicorn-nginx.template.conf` to it's new home:
+
+```
+sed "
+```
+
 
 
