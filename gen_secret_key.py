@@ -6,7 +6,7 @@ def append_secret_key_if_not_in_file():
     if 'secrets.py' not in os.listdir(os.path.dirname(os.path.abspath(__file__))):
         with open('secrets.py', 'w') as fh:
             chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-            key = ''.join(random.SystemRandom().choices(chars, k=50))
+            key = ''.join(random.SystemRandom().sample(chars, k=50))
             fh.write("""SECRET_KEY = '{}'""".format(key))
             fh.close()
     else:
@@ -15,7 +15,7 @@ def append_secret_key_if_not_in_file():
                 sys.exit('SECRET_KEY exists, exiting')
         with open('secrets.py', 'a') as fh:
             chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-            key = ''.join(random.SystemRandom().choices(chars, k=50))
+            key = ''.join(random.SystemRandom().sample(chars, k=50))
             fh.write("""SECRET_KEY = '{}'""".format(key))
             fh.close()
 
