@@ -1,0 +1,22 @@
+[Unit]
+Description=Gunicorn server for SITENAME
+
+[Service]
+Restart=on-failure
+User=USERNAME
+WorkingDirectory=/opt/superset
+ExecStart=/opt/superset/venv/bin/gunicorn \
+        --workers 4 \
+        --worker-class gevent \
+        --worker-connections 500
+        --timeout 120 \
+        --bind unix:/tmp/SITENAME.socket \
+        --limit-request-line 0 \
+        --limit-request-field_size 0 \
+        --access-logfile /var/log/superset/access.log \
+        --error-logfile /var/log/superset/error.log \
+        --log-level info \
+        superset:app
+
+[Install]
+WantedBy=multi-user.target

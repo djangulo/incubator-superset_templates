@@ -85,10 +85,10 @@ This document assumes you're using an Ubuntu/Debian build, and Aptitude as your 
     pip install superset
     ```
 
-    Install database dependencies (mysql in this case, see: [here](https://superset.incubator.apache.org/installation.html#database-dependencies) (github.com) for more information on SqlAlchemy dependencies (github.com)), and others (caching, etc)
+    Install: database dependencies (mysql in this case, see: [here](https://superset.incubator.apache.org/installation.html#database-dependencies) (github.com) for more information on SqlAlchemy dependencies (github.com)), and others (caching, etc)
 
     ```
-    pip install mysqlclient redis
+    pip install mysqlclient redis gevent
     ```
     
     Modify `superset_config.py` with the uri created earlier
